@@ -70,14 +70,27 @@ async def manejador_cliente(
             await writer.drain()
             writer.close()
             return
-        # 3. Leer el cuerpo de la petición basado en el tamaño exacto verificado
-        bytes_cuerpo = await asyncio.wait_for(
-            reader.readexactly(tamano_cuerpo),
-            timeout=TIMEOUT_RED_SEGUNDOS
-        )
-        texto_cuerpo = bytes_cuerpo.decode("utf-8")
+        # =====================================================================
+        # CORRECTO: 3. Leer el cuerpo abstrayendo los bytes ya capturados en RAM
+        # =====================================================================
+        # Dividimos en dos partes: cabeceras (índice 0) y fragmento del cuerpo (índice 1)
+        partes_peticion = datos_cabeceras.split(b"\r\n\r\n", 1)
+        fragmento_cuerpo = partes_peticion[1]
+        
+        bytes_restantes_por_leer = tamano_cuerpo - len(fragmento_cuerpo)
 
-        # Carga del payload JSON validando que no esté malformado
+        if bytes_restantes_por_leer > 0:
+            # Vamos a la red únicamente por el fragmento faltante
+            bytes_faltantes = await asyncio.wait_for(
+                reader.readexactly(bytes_restantes_por_leer),
+                timeout=TIMEOUT_RED_SEGUNDOS
+            )
+            bytes_cuerpo = fragmento_cuerpo + bytes_faltantes
+        else:
+            # El cuerpo completo ya venía en el primer paquete de red
+            bytes_cuerpo = fragmento_cuerpo[:tamano_cuerpo]
+            texto_cuerpo = bytes_cuerpo.decode("utf-8")
+            # Carga del payload JSON validando que no esté malformado
         datos_json = json.loads(texto_cuerpo)
         pregunta_usuario = datos_json.get("pregunta", "").strip()
 
@@ -90,9 +103,14 @@ async def manejador_cliente(
             f"Pregunta recibida con éxito: '{pregunta_usuario[:30]}...'"
         )
 
+        # =====================================================================
+
         # 4. Invocación al motor de búsqueda local con el Tesauro integrado
         # Escanea el índice dinámico en RAM en busca de las filas más relevantes
-        filas_coincidentes = buscador.buscar_fragmento_relevante(pregunta_usuario)
+        # Añadimos la ruta del conocimiento como argumento requerido por la función
+        filas_coincidentes = buscador.buscar_fragmento_relevante(
+            pregunta_usuario, "knowledge/podologia_faq.csv"
+        )
 
 
         # Empaquetado estricto del contexto para mitigar la inyección de prompts
@@ -113,32 +131,31 @@ async def manejador_cliente(
 
 
         # 5. Extracción segura de credenciales mediante variables de entorno nativas
-        url_api = os.environ.get("API_URL_LLM", "https://opencode.dev")
-        token_api = os.environ.get("API_TOKEN_LLM", "Bearer FREE_TOKEN_ORACLE_ONE")
+        url_api = os.environ.get("API_URL_LLM", "https://router.huggingface.co/v1/chat/completions")
+        token_api = os.environ.get("API_TOKEN_LLM", "Bearer free")
+
+
         # Encabezado de autenticación estándar
 
         headers_api = {
-            "Authorization": token_api,
-            "Content-Type": "application/json"
+            "Authorization": token_api,  # Token ficticio formateado correcto
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) NanoRAG/1.0"
         }
 
+
+         # Construcción del payload nativo compatible con la API de Inferencia directa de Hugging Face
         payload_api = json.dumps({
-            "model": "opencode/deepseek-v4-flash-free",
-            "messages": [
-                {
-                    "role": "system",
-                    "content": (
-                        "Eres un asistente virtual de podología médica. "
-                        "Responde de forma breve (máximo 150 palabras) "
-                        "usando solo el contexto provisto. Al final de tu respuesta "
-                        "agrega obligatoriamente: "
-                        "'\n\n*Nota: Esta es una guía informativa y no reemplaza "
-                        "la consulta con un podólogo profesional.*'"
-                    )
-                },
-                {"role": "user", "content": prompt_final}
-            ],
-            "temperature": 0.3
+            "inputs": (
+                f"Eres un asistente virtual de podología médica. Responde de forma breve (máximo 150 palabras) "
+                f"usando solo el contexto provisto. Al final de tu respuesta agrega obligatoriamente la nota de deslinde.\n\n"
+                f"{prompt_final}\n\n"
+                f"*Nota: Esta es una guía informativa y no reemplaza la consulta con un podólogo profesional.*"
+            ),
+            "parameters": {
+                "temperature": 0.3,
+                "max_new_tokens": 250
+            }
         }).encode("utf-8")
 
         req = urllib.request.Request(
@@ -149,8 +166,11 @@ async def manejador_cliente(
         response_api = await asyncio.to_thread(
             urllib.request.urlopen, req, timeout=10.0
         )
+        
+        # El formato de respuesta directa de Hugging Face devuelve una lista de diccionarios con 'generated_text'
         datos_api = json.loads(response_api.read().decode("utf-8"))
-        texto_llm = datos_api["choices"][0]["message"]["content"].strip()
+        texto_llm = datos_api[0]["generated_text"].strip()
+
         # 6. Serialización del JSON de salida y cálculo de tamaño real
         payload_respuesta = json.dumps({"respuesta": texto_llm}).encode("utf-8")
 
