@@ -188,7 +188,11 @@ async def iniciar_servidor_http(indice_conocimiento: dict, lock_indice: asyncio.
     async def adaptador(r, w):
         await manejador_cliente(r, w, indice_conocimiento, lock_indice)
 
-    servidor = await asyncio.start_server(adaptador, "0.0.0.0", 8000)
-    logging.info("[SERVIDOR] Escuchando en http://127.0.0.1:8000")
+    # Inyección dinámica del puerto y host requeridos para Hugging Face Spaces
+    host = "0.0.0.0"
+    puerto = int(os.environ.get("PORT", 7860))
+
+    servidor = await asyncio.start_server(adaptador, host, puerto)
+    logging.info(f"[SERVIDOR] Escuchando en http://{host}:{puerto}")
     async with servidor:
         await servidor.serve_forever()
