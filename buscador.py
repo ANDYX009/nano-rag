@@ -1,5 +1,4 @@
 import re
-from indexador import INDICE_CONOCIMIENTO
 
 # Diccionario de Expansión Semántica (Sinónimos Podológicos)
 SINONIMOS_PODOLOGIA = {
@@ -20,7 +19,6 @@ def limpiar_texto(texto: str) -> set:
     palabras = re.findall(r'[a-z0-9]+', texto_limpio)
     tokens = set(palabras)
     
-    # EXPANSIÓN SEMÁNTICA: Si la palabra tiene sinónimos, los inyectamos al conjunto
     tokens_expandidos = set(tokens)
     for t in tokens:
         if t in SINONIMOS_PODOLOGIA:
@@ -28,14 +26,15 @@ def limpiar_texto(texto: str) -> set:
             
     return tokens_expandidos
 
-def buscar_fragmento_relevante(pregunta_usuario: str, ruta_archivo: str) -> dict:
-    """Escanea el índice en RAM y devuelve la fila con mayor coincidencia de palabras clave."""
-    fragmentos = INDICE_CONOCIMIENTO.get(ruta_archivo, [])
+def buscar_fragmento_relevante(pregunta_usuario: str, ruta_archivo: str, indice_conocimiento: dict) -> list:
+    """Escanea el índice inyectado desde RAM y devuelve una lista con la fila más relevante."""
+    # Extraemos los fragmentos usando el estado global real compartido
+    fragmentos = indice_conocimiento.get(ruta_archivo, [])
     if not fragmentos:
-        return {}
+        return []
 
     tokens_pregunta = limpiar_texto(pregunta_usuario)
-    mejor_fragmento = {}
+    mejor_fragmento = None
     max_coincidencias = 0
 
     for frag in fragmentos:
@@ -46,4 +45,5 @@ def buscar_fragmento_relevante(pregunta_usuario: str, ruta_archivo: str) -> dict
             max_coincidencias = coincidencias
             mejor_fragmento = frag
 
-    return mejor_fragmento
+    # Retorna una lista conteniendo el fragmento para asegurar compatibilidad con el bucle for de server.py
+    return [mejor_fragmento] if mejor_fragmento else []
