@@ -4,6 +4,7 @@ import urllib.request
 import logging
 import os
 import sys
+
 import buscador
 
 # Configuración estricta del sistema de logs nativo para producción
@@ -18,10 +19,10 @@ MAX_BYTES_CUERPO = 10 * 1024 * 1024  # Límite estricto de 10 Megabytes
 TIMEOUT_RED_SEGUNDOS = 3.0           # Mitigación absoluta contra ataques Slowloris
 
 async def manejador_cliente(
-    reader: asyncio.StreamReader, 
-    writer: asyncio.StreamWriter,
-    indice_conocimiento: dict,
-    lock_indice: asyncio.Lock
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
+        indice_conocimiento: dict,
+        lock_indice: asyncio.Lock
 ):
     """Gestiona de forma asíncrona y aislada el ciclo de vida de cada socket."""
     direccion_cliente = writer.get_extra_info('peername')
@@ -33,10 +34,13 @@ async def manejador_cliente(
         inicio_conexion = asyncio.get_event_loop().time()
 
         while b"\r\n\r\n" not in datos_cabeceras:
-            tiempo_restante = TIMEOUT_RED_SEGUNDOS - (asyncio.get_event_loop().time() - inicio_conexion)
-            
+            delta = asyncio.get_event_loop().time() - inicio_conexion
+            tiempo_restante = TIMEOUT_RED_SEGUNDOS - delta
+
             if tiempo_restante <= 0:
-                raise asyncio.TimeoutError("Ventana de tiempo para cabeceras agotada (Slowloris).")
+                raise asyncio.TimeoutError(
+                    "Ventana de tiempo para cabeceras agotada (Slowloris)."
+                )
 
             fragmento = await asyncio.wait_for(
                 reader.read(4096),
@@ -62,9 +66,15 @@ async def manejador_cliente(
                 break
 
         # Aplicación del guardarraíl estricto contra inundación de RAM
+        limite_mb = MAX_BYTES_CUERPO // (1024 * 1024)
         if tamano_cuerpo > MAX_BYTES_CUERPO:
-            logging.error(f"Petición rechazada: {tamano_cuerpo} bytes superan el límite de 10MB.")
-            respuesta_error = b"HTTP/1.1 413 Payload Too Large\r\nConnection: close\r\n\r\n"
+            logging.error(
+                f"Petición rechazada: {tamano_cuerpo} bytes superan el límite de {limite_mb}MB."
+            )
+            respuesta_error = (
+                b"HTTP/1.1 413 Payload Too Large\r\n"
+                b"Connection: close\r\n\r\n"
+            )
             writer.write(respuesta_error)
             await writer.drain()
             writer.close()
@@ -103,7 +113,10 @@ async def manejador_cliente(
         contexto_medico = ""
         if filas_coincidentes:
             contexto_medico = "\n".join([
-                f"Pregunta frecuente: {f['pregunta']}\nRespuesta médica: {f['respuesta']}"
+                (
+                    f"Pregunta frecuente: {f['pregunta']}\n"
+                    f"Respuesta médica: {f['respuesta']}"
+                )
                 for f in filas_coincidentes
             ])
 
@@ -131,12 +144,17 @@ async def manejador_cliente(
                 "Authorization": token_api,
                 "Content-Type": "application/json"
             }
+            instruction = (
+                "Eres un asistente virtual de podología médica. Responde de forma breve "
+                "(máximo 150 palabras) usando solo el contexto provisto. Al final de tu "
+                "respuesta agrega obligatoriamente la nota de deslinde.\n\n"
+            )
             payload_api = json.dumps({
                 "inputs": (
-                    "Eres un asistente virtual de podología médica. Responde de forma breve (máximo 150 palabras) "
-                    f"usando solo el contexto provisto. Al final de tu respuesta agrega obligatoriamente la nota de deslinde.\n\n"
+                    f"{instruction}"
                     f"{prompt_final}\n\n"
-                    "*Nota: Esta es una guía informativa y no reemplaza la consulta con un podólogo profesional.*"
+                    "*Nota: Esta es una guía informativa y no reemplaza la "
+                    "consulta con un podólogo profesional.*"
                 ),
                 "parameters": {
                     "temperature": 0.3,
