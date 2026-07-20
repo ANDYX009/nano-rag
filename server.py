@@ -61,7 +61,7 @@ async def manejador_cliente(
             if linea.lower().startswith("content-length:"):
                 try:
                     tamano_cuerpo = int(linea.split(":", 1)[1].strip())
-                except ValueError:
+                except (ValueError, IndexError):
                     logging.warning(f"Content-Length inválido desde {direccion_cliente}")
                 break
 
@@ -82,7 +82,7 @@ async def manejador_cliente(
 
         # 3. Leer el cuerpo abstrayendo los bytes ya capturados en RAM
         partes_peticion = datos_cabeceras.split(b"\r\n\r\n", 1)
-        fragmento_cuerpo = partes_peticion[1]
+        fragmento_cuerpo = partes_peticion[1]  # CORREGIDO: Indexación explícita de la tupla de bytes
         bytes_restantes_por_leer = tamano_cuerpo - len(fragmento_cuerpo)
 
         if bytes_restantes_por_leer > 0:
@@ -197,23 +197,31 @@ async def manejador_cliente(
         logging.error(f"Fallo general en la conexión con {direccion_cliente}: {error_critico}")
 
     finally:
-        writer.close()
         try:
+            writer.close()
             await writer.wait_closed()
         except Exception:
             pass
-        logging.info(f"Conexión con {direccion_cliente} cerrada.")
 
-async def iniciar_servidor_http(indice_conocimiento: dict, lock_indice: asyncio.Lock) -> None:
-    """Arranca el bucle de red inyectando las dependencias globales compartidas."""
-    async def adaptador(r, w):
-        await manejador_cliente(r, w, indice_conocimiento, lock_indice)
+async def iniciar_servidor_http(indice_conocimiento: dict, lock_indice: asyncio.Lock):
+    """Inicializa el servidor TCP asíncrono leyendo el puerto de la nube."""
+    # Sincronización estricta para Render, usando fallback a su puerto nativo 10000
+    puerto_env = os.environ.get("PORT", "10000")
+    try:
+        puerto = int(puerto_env)
+    except ValueError:
+        logging.warning(f"Puerto PORT inválido '{puerto_env}'. Usando fallback 10000.")
+        puerto = 10000
 
-    # Inyección dinámica del puerto y host requeridos para producción
-    host = "0.0.0.0"
-    puerto = int(os.environ.get("PORT", 7860))
+    host = "0.0.0.0"  # Interfaz obligatoria para la escucha interna de contenedores Docker
 
-    servidor = await asyncio.start_server(adaptador, host, puerto)
-    logging.info(f"[SERVIDOR] Escuchando en http://{host}:{puerto}")
+    servidor = await asyncio.start_server(
+        lambda r, w: manejador_cliente(r, w, indice_conocimiento, lock_indice),
+        host,
+        puerto
+    )
+
+    logging.info(f"Servidor Nano-RAG activo en Render: http://{host}:{puerto}")
+
     async with servidor:
         await servidor.serve_forever()
