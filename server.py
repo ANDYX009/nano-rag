@@ -159,13 +159,16 @@ async def manejador_cliente(
             else:
                 texto_llm = str(datos_api).strip()
 
-        # 6. Serialización del JSON de salida y cálculo de tamaño real
-        payload_respuesta = json.dumps({"respuesta": texto_llm}).encode("utf-8")
+        # 6. Serialización garantizando caracteres UTF-8 legibles (sin escape ASCII)
+        payload_respuesta = json.dumps({"respuesta": texto_llm}, ensure_ascii=False).encode("utf-8")
 
         cabeceras_respuesta = (
             f"HTTP/1.1 200 OK\r\n"
             f"Content-Type: application/json; charset=utf-8\r\n"
             f"Content-Length: {len(payload_respuesta)}\r\n"
+            f"Access-Control-Allow-Origin: *\r\n"
+            f"Access-Control-Allow-Methods: POST, OPTIONS\r\n"
+            f"Access-Control-Allow-Headers: Content-Type\r\n"
             f"Connection: close\r\n\r\n"
         ).encode("utf-8")
 
@@ -188,7 +191,7 @@ async def iniciar_servidor_http(indice_conocimiento: dict, lock_indice: asyncio.
     async def adaptador(r, w):
         await manejador_cliente(r, w, indice_conocimiento, lock_indice)
 
-    # Inyección dinámica del puerto y host requeridos para Hugging Face Spaces
+    # Inyección dinámica del puerto y host requeridos para producción
     host = "0.0.0.0"
     puerto = int(os.environ.get("PORT", 7860))
 
