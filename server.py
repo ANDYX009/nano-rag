@@ -82,7 +82,7 @@ async def manejador_cliente(
 
         # 3. Leer el cuerpo abstrayendo los bytes ya capturados en RAM
         partes_peticion = datos_cabeceras.split(b"\r\n\r\n", 1)
-        fragmento_cuerpo = partes_peticion[1]  # CORREGIDO: Indexación explícita de la tupla de bytes
+        fragmento_cuerpo = partes_peticion[1]
         bytes_restantes_por_leer = tamano_cuerpo - len(fragmento_cuerpo)
 
         if bytes_restantes_por_leer > 0:
@@ -131,12 +131,13 @@ async def manejador_cliente(
         url_api = os.environ.get("API_URL_LLM", "https://huggingface.co")
         token_api = os.environ.get("API_TOKEN_LLM", "Bearer free")
 
-        if token_api == "Bearer free" or "huggingface.co" in url_api:
+        # CORREGIDO: Se elimina la restricción 'huggingface.co' de la URL para habilitar llamadas reales en la nube
+        if token_api == "Bearer free" or token_api.strip() == "Bearer":
             await asyncio.sleep(0.1)
             texto_llm = (
                 "Asistente Médico Podológico: Con base en el historial clínico indexado, "
                 f"su consulta sobre '{pregunta_usuario[:25]}...' sugiere una atención prioritaria. "
-                "Por favor, mantenga la higiene de la zona, evite la manipulación casera y acuda a valoración."
+                "Por favor, mantenga la higiene de la zona, evite la manipulación casera and acuda a valoración."
                 "\n\n*Nota: Esta es una guía informativa y no reemplaza la consulta con un podólogo profesional.*"
             )
         else:
@@ -205,7 +206,6 @@ async def manejador_cliente(
 
 async def iniciar_servidor_http(indice_conocimiento: dict, lock_indice: asyncio.Lock):
     """Inicializa el servidor TCP asíncrono leyendo el puerto de la nube."""
-    # Sincronización estricta para Render, usando fallback a su puerto nativo 10000
     puerto_env = os.environ.get("PORT", "10000")
     try:
         puerto = int(puerto_env)
