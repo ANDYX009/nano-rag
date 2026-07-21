@@ -178,16 +178,23 @@ async def manejador_cliente(
                 "respuesta agrega obligatoriamente la nota de deslinde.\n\n"
             )
             payload_api = json.dumps({
-                "inputs": (
-                    f"{instruction}"
-                    f"{prompt_final}\n\n"
-                    "*Nota: Esta es una guía informativa y no reemplaza la "
-                    "consulta con un podólogo profesional.*"
-                ),
-                "parameters": {
-                    "temperature": 0.3,
-                    "max_new_tokens": 250
-                }
+                "model": "meta-llama/Llama-3.1-8B-Instruct",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": instruction.strip()
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            f"{prompt_final}\n\n"
+                            "*Nota: Esta es una guía informativa y no reemplaza la "
+                            "consulta con un podólogo profesional.*"
+                        )
+                    }
+                ],
+                "temperature": 0.3,
+                "max_tokens": 250
             }).encode("utf-8")
 
             req = urllib.request.Request(
@@ -200,19 +207,13 @@ async def manejador_cliente(
                     _ejecutar_peticion_sincrona, req
                 )
                 datos_api = json.loads(bytes_respuesta_api.decode("utf-8"))
-                
-                if isinstance(datos_api, list) and len(datos_api) > 0:
-                    texto_llm = datos_api[0].get("generated_text", "").strip()
-                elif isinstance(datos_api, dict):
-                    texto_llm = datos_api.get("generated_text", "").strip()
-                else:
-                    texto_llm = str(datos_api).strip()
-                    """ except Exception as e_api:
-                logging.error(f"Error de conexión saliente a Hugging Face: {e_api}")
+
                 texto_llm = (
-                    "Error de comunicación con el motor de IA. Por favor, intente de nuevo. "
-                    "\n\n*Nota: Esta es una guía informativa y no reemplaza la consulta con un podólogo profesional.*"
-                )"""
+                    datos_api.get("choices", [{}])[0]
+                    .get("message", {})
+                    .get("content", "")
+                    .strip()
+                )
             except Exception as e_api:
                 logging.error(f"Error de conexión saliente a Hugging Face: {e_api}")
                 # DIAGNÓSTICO TEMPORAL: Inyectar la excepción exacta en la respuesta
