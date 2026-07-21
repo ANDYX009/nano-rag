@@ -155,11 +155,15 @@ async def manejador_cliente(
             f"Pregunta del paciente: {pregunta_usuario}"
         )
 
+        # ==============================================================================
         # 5. Extracción segura de credenciales e Inferencia con Contingencia Local
-        url_api = os.environ.get("API_URL_LLM", "https://huggingface.co").strip()
+        # ==============================================================================
+        url_base = os.environ.get("API_URL_LLM", "https://router.huggingface.co").strip().rstrip("/")
+        url_final = f"{url_base}/v1/chat/completions"
+        
         token_api = os.environ.get("API_TOKEN_LLM", "Bearer free").strip()
 
-        if token_api == "Bearer free" or token_api.strip() == "Bearer":
+        if token_api == "Bearer free" or token_api.strip() == "Bearer" or not token_api:
             await asyncio.sleep(0.1)
             texto_llm = (
                 "Asistente Médico Podológico: Con base en el historial clínico indexado, "
@@ -168,15 +172,20 @@ async def manejador_cliente(
                 "\n\n*Nota: Esta es una guía informativa y no reemplaza la consulta con un podólogo profesional.*"
             )
         else:
+            # Asegurar el prefijo estricto Bearer exigido por el Router de Hugging Face
+            token_formateado = token_api if token_api.startswith("Bearer ") else f"Bearer {token_api}"
+            
             headers_api = {
-                "Authorization": token_api,
+                "Authorization": token_formateado,
                 "Content-Type": "application/json"
             }
+            
             instruction = (
                 "Eres un asistente virtual de podología médica. Responde de forma breve "
                 "(máximo 150 palabras) usando solo el contexto provisto. Al final de tu "
                 "respuesta agrega obligatoriamente la nota de deslinde.\n\n"
             )
+            
             payload_api = json.dumps({
                 "model": "meta-llama/Llama-3.1-8B-Instruct",
                 "messages": [
@@ -198,8 +207,9 @@ async def manejador_cliente(
             }).encode("utf-8")
 
             req = urllib.request.Request(
-                url_api, data=payload_api, headers=headers_api, method="POST"
+                url_final, data=payload_api, headers=headers_api, method="POST"
             )
+
 
             # PARCHADO: Control exhaustivo de la excepción del hilo para evitar caídas mudas
             try:
