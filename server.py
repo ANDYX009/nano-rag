@@ -89,9 +89,11 @@ async def manejador_cliente(
             writer.close()
             return
 
-        # 3. Leer el cuerpo abstrayendo los bytes ya capturados en RAM
+         # 3. Leer el cuerpo abstrayendo los bytes ya capturados en RAM
         partes_peticion = datos_cabeceras.split(b"\r\n\r\n", 1)
-        fragmento_cuerpo = partes_peticion[1]
+        
+        # CORREGIDO: Extracción explícita del fragmento del cuerpo usando el índice [1]
+        fragmento_cuerpo = partes_peticion[1] if len(partes_peticion) > 1 else b""
         bytes_restantes_por_leer = tamano_cuerpo - len(fragmento_cuerpo)
 
         if bytes_restantes_por_leer > 0:
