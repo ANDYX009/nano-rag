@@ -106,6 +106,23 @@ async def manejador_cliente(
             bytes_cuerpo = fragmento_cuerpo[:tamano_cuerpo]
 
         texto_cuerpo = bytes_cuerpo.decode("utf-8")
+
+        # [BLINDAJE HEALTH CHECK] Si el cuerpo está vacío, responde exitosamente a Render sin romper el JSON
+        if not texto_cuerpo.strip():
+            logging.info(f"Petición de diagnóstico o Health Check detectada desde {direccion_cliente}")
+            cabeceras_hc = (
+                b"HTTP/1.1 200 OK\r\n"
+                b"Content-Type: text/plain; charset=utf-8\r\n"
+                b"Content-Length: 2\r\n"
+                b"Connection: close\r\n\r\n"
+                b"OK"
+            )
+            writer.write(cabeceras_hc)
+            await writer.drain()
+            return
+
+        # Procesamiento normal si la petición incluye un payload estructurado
+
         datos_json = json.loads(texto_cuerpo)
         pregunta_usuario = datos_json.get("pregunta", "").strip()
 
