@@ -207,12 +207,20 @@ async def manejador_cliente(
                     texto_llm = datos_api.get("generated_text", "").strip()
                 else:
                     texto_llm = str(datos_api).strip()
-            except Exception as e_api:
+                    """ except Exception as e_api:
                 logging.error(f"Error de conexión saliente a Hugging Face: {e_api}")
                 texto_llm = (
                     "Error de comunicación con el motor de IA. Por favor, intente de nuevo. "
                     "\n\n*Nota: Esta es una guía informativa y no reemplaza la consulta con un podólogo profesional.*"
+                )"""
+            except Exception as e_api:
+                logging.error(f"Error de conexión saliente a Hugging Face: {e_api}")
+                # DIAGNÓSTICO TEMPORAL: Inyectar la excepción exacta en la respuesta
+                texto_llm = (
+                    f"Error de comunicación con el motor de IA. Detalle técnico: {str(e_api)}. "
+                    "\n\n*Nota: Esta es una guía informativa y no reemplaza la consulta con un podólogo profesional.*"
                 )
+
 
         # 6. Serialización garantizando caracteres UTF-8 legibles (sin escape ASCII)
         payload_respuesta = json.dumps({"respuesta": texto_llm}, ensure_ascii=False).encode("utf-8")
