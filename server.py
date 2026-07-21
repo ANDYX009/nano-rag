@@ -156,8 +156,8 @@ async def manejador_cliente(
         )
 
         # 5. Extracción segura de credenciales e Inferencia con Contingencia Local
-        url_api = os.environ.get("API_URL_LLM", "https://huggingface.co")
-        token_api = os.environ.get("API_TOKEN_LLM", "Bearer free")
+        url_api = os.environ.get("API_URL_LLM", "https://huggingface.co").strip()
+        token_api = os.environ.get("API_TOKEN_LLM", "Bearer free").strip()
 
         if token_api == "Bearer free" or token_api.strip() == "Bearer":
             await asyncio.sleep(0.1)
