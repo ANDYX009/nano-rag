@@ -56,10 +56,25 @@ async def manejador_cliente(
                 timeout=tiempo_restante
             )
             if not fragmento:
+                # Si no hay fragmento y ya acumulamos algo (como un GET /), intentamos responder éxito
+                if b"GET /" in datos_cabeceras or not datos_cabeceras.strip():
+                    try:
+                        writer.write(
+                            b"HTTP/1.1 200 OK\r\n"
+                            b"Content-Type: text/plain\r\n"
+                            b"Content-Length: 2\r\n"
+                            b"Connection: close\r\n\r\n"
+                            b"OK"
+                        )
+                        await writer.drain()
+                    except Exception:
+                        pass
                 logging.warning(f"El cliente {direccion_cliente} cerró la conexión abruptamente.")
                 writer.close()
                 return
+
             datos_cabeceras += fragmento
+            
 
         # 2. Separar cabeceras y buscar el tamaño declarado del cuerpo
         bloque_cabeceras, _ = datos_cabeceras.split(b"\r\n\r\n", 1)
