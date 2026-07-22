@@ -212,7 +212,7 @@ async def manejador_cliente(
         # ==============================================================================
         # 5. Extracción segura de credenciales e Inferencia con Contingencia Local
         # ==============================================================================
-        url_base = os.environ.get("API_URL_LLM", "https://router.huggingface.co").strip().rstrip("/")
+        url_base = os.environ.get("API_URL_LLM", "https://huggingface.co").strip().rstrip("/")
         url_final = f"{url_base}/v1/chat/completions"
         
         token_api = os.environ.get("API_TOKEN_LLM", "Bearer free").strip()
@@ -222,7 +222,7 @@ async def manejador_cliente(
             texto_llm = (
                 "Asistente Médico Podológico: Con base en el historial clínico indexado, "
                 f"su consulta sobre '{pregunta_usuario[:25]}...' sugiere una atención prioritaria. "
-                "Por favor, mantenga la higiene de la zona, evite la manipulación casera y acuda a valoración."
+                "Por favor, mantenga la higiene de la zona, evite la manipulación casera and acuda a valoración."
                 "\n\n*Nota: Esta es una guía informativa y no reemplaza la consulta con un podólogo profesional.*"
             )
         else:
@@ -233,11 +233,13 @@ async def manejador_cliente(
                 "Authorization": token_formateado,
                 "Content-Type": "application/json"
             }
-            
+             
             instruction = (
-                "Eres un asistente virtual de podología médica. Responde de forma breve "
-                "(máximo 150 palabras) usando solo el contexto provisto. Al final de tu "
-                "respuesta agrega obligatoriamente la nota de deslinde.\n\n"
+                "Eres un asistente virtual de podología médica. Tu respuesta total NO debe superar las 100 palabras.\n"
+                "Cumple estrictamente con la siguiente estructura:\n"
+                "1. Un párrafo introductorio de diagnóstico contextual breve (máximo 2 oraciones).\n"
+                "2. Una lista con exactamente 3 viñetas cortas de acción directa (máximo 15 palabras por viñeta).\n"
+                "3. Finaliza obligatoriamente tu respuesta con esta frase exacta: 'Nota: Esta es una guía informativa y no reemplaza la consulta con un podólogo profesional.'"
             )
             
             payload_api = json.dumps({
@@ -249,20 +251,17 @@ async def manejador_cliente(
                     },
                     {
                         "role": "user",
-                        "content": (
-                            f"{prompt_final}\n\n"
-                            "*Nota: Esta es una guía informativa y no reemplaza la "
-                            "consulta con un podólogo profesional.*"
-                        )
+                        "content": prompt_final.strip()
                     }
                 ],
-                "temperature": 0.3,
-                "max_tokens": 250
+                "temperature": 0.2,
+                "max_tokens": 512
             }).encode("utf-8")
 
             req = urllib.request.Request(
                 url_final, data=payload_api, headers=headers_api, method="POST"
             )
+
 
 
             # PARCHADO: Control exhaustivo de la excepción del hilo para evitar caídas mudas
