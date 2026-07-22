@@ -23,8 +23,9 @@ TIMEOUT_RED_SEGUNDOS = 3.0           # Mitigación absoluta contra ataques Slowl
 ssl_context_unverified = ssl._create_unverified_context()
 
 def _ejecutar_peticion_sincrona(req: urllib.request.Request) -> bytes:
-    """Ejecuta la llamada de red síncrona inyectando el contexto SSL parchado."""
-    with urllib.request.urlopen(req, context=ssl_context_unverified, timeout=10.0) as response:
+    """Ejecuta la llamada de red síncrona inyectando el contexto SSL parchado y timeout extendido."""
+    # Aumentado a 30.0 segundos para dar margen al procesamiento completo de Hugging Face
+    with urllib.request.urlopen(req, context=ssl_context_unverified, timeout=30.0) as response:
         return response.read()
 
 async def manejador_cliente(
