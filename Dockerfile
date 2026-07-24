@@ -1,6 +1,9 @@
 # 1. Imagen base oficial de Python 3.14 sobre Alpine Linux
 FROM python:3.14-alpine
 
+# 1b. Robustecimiento Criptográfico: Instalar certificados CA raíz oficiales
+RUN apk add --no-cache ca-certificates
+
 # 2. Configurar variables de entorno óptimas para Python en contenedores
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

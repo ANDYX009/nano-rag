@@ -5,7 +5,6 @@ import logging
 import os
 import sys
 import ssl
-
 import buscador
 
 # Configuración estricta del sistema de logs nativo para producción
@@ -19,13 +18,13 @@ logging.basicConfig(
 MAX_BYTES_CUERPO = 10 * 1024 * 1024  # Límite estricto de 10 Megabytes
 TIMEOUT_RED_SEGUNDOS = 3.0           # Mitigación absoluta contra ataques Slowloris
 
-# [PARCHE ALPINE SSL] Evita la rotura del acuerdo TLS/SSL por falta de certificados CA
-ssl_context_unverified = ssl._create_unverified_context()
+# Robustecimiento Criptográfico: Uso de contexto SSL nativo verificado por defecto
+ssl_context_seguro = ssl.create_default_context()
 
 def _ejecutar_peticion_sincrona(req: urllib.request.Request) -> bytes:
-    """Ejecuta la llamada de red síncrona inyectando el contexto SSL parchado y timeout extendido."""
-    # Aumentado a 30.0 segundos para dar margen al procesamiento completo de Hugging Face
-    with urllib.request.urlopen(req, context=ssl_context_unverified, timeout=30.0) as response:
+    """Ejecuta la llamada de red síncrona inyectando un contexto SSL verificado y seguro."""
+    # El uso de ssl_context_seguro valida la identidad digital de Hugging Face usando ca-certificates
+    with urllib.request.urlopen(req, context=ssl_context_seguro, timeout=30.0) as response:
         return response.read()
 
 async def manejador_cliente(
@@ -236,11 +235,10 @@ async def manejador_cliente(
             }
              
             instruction = (
-                "Eres un asistente virtual de podología médica. Tu respuesta total NO debe superar las 100 palabras.\n"
+                "Eres un asistente virtual de podología médica. Tu respuesta total NO debe superar las 75 palabras.\n"
                 "Cumple estrictamente con la siguiente estructura:\n"
                 "1. Un párrafo introductorio de diagnóstico contextual breve (máximo 2 oraciones).\n"
                 "2. Una lista con exactamente 3 viñetas cortas de acción directa (máximo 15 palabras por viñeta).\n"
-                "3. Finaliza obligatoriamente tu respuesta con esta frase exacta: 'Nota: Esta es una guía informativa y no reemplaza la consulta con un podólogo profesional.'"
             )
             
             payload_api = json.dumps({
@@ -263,8 +261,6 @@ async def manejador_cliente(
                 url_final, data=payload_api, headers=headers_api, method="POST"
             )
 
-
-
             # PARCHADO: Control exhaustivo de la excepción del hilo para evitar caídas mudas
             try:
                 bytes_respuesta_api = await asyncio.to_thread(
@@ -272,12 +268,21 @@ async def manejador_cliente(
                 )
                 datos_api = json.loads(bytes_respuesta_api.decode("utf-8"))
 
-                texto_llm = (
+                contenido_crudo = (
                     datos_api.get("choices", [{}])[0]
                     .get("message", {})
                     .get("content", "")
                     .strip()
                 )
+
+                # Inyección Determinista de la Firma Obligatoria por Código (Garantía de Cumplimiento)
+                firma_obligatoria = "\n\nNota: Esta es una guía informativa y no reemplaza la consulta con un podólogo profesional."
+
+                if firma_obligatoria.strip() in contenido_crudo:
+                    texto_llm = contenido_crudo
+                else:
+                    texto_llm = f"{contenido_crudo}{firma_obligatoria}"
+
             except Exception as e_api:
                 logging.error(f"Error de conexión saliente a Hugging Face: {e_api}")
                 # DIAGNÓSTICO TEMPORAL: Inyectar la excepción exacta en la respuesta
