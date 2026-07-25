@@ -249,12 +249,13 @@ async def manejador_cliente(
         else:
             # Asegurar el prefijo estricto Bearer exigido por el Router de Hugging Face
             token_formateado = token_api if token_api.startswith("Bearer ") else f"Bearer {token_api}"
-            
+             
             headers_api = {
                 "Authorization": token_formateado,
-                "Content-Type": "application/json"
-            }
-             
+                "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+           }
+
             instruction = (
                 "Eres un asistente virtual de podología médica. Tu respuesta total NO debe superar las 75 palabras.\n"
                 "Cumple estrictamente con la siguiente estructura:\n"
