@@ -233,11 +233,10 @@ async def manejador_cliente(
 
         # ==============================================================================
         # 5. Extracción segura de credenciales e Inferencia con Contingencia Local
-        # ==============================================================================
-        url_base = os.environ.get("API_URL_LLM", "https://huggingface.co").strip().rstrip("/")
-        url_final = f"{url_base}/v1/chat/completions"
+        # ============================================================================== 
         
-        token_api = os.environ.get("API_TOKEN_LLM", "Bearer free").strip()
+        url_final = os.environ.get("API_URL_LLM", "https://sambanova.ai").strip()
+        token_api = os.environ.get("API_TOKEN_LLM", "").strip()
 
         if token_api == "Bearer free" or token_api.strip() == "Bearer" or not token_api:
             await asyncio.sleep(0.1)
