@@ -263,7 +263,7 @@ async def manejador_cliente(
             )
             
             payload_api = json.dumps({
-                "model": "Qwen2.5-7B-Instruct",
+                "model": "Meta-Llama-3.1-8B-Instruct",
                 "messages": [
                     {
                         "role": "system",
