@@ -2,7 +2,7 @@ import asyncio
 import hashlib
 import os
 import sys
-from indexador import cargar_csv_en_ram
+import indexador  # Importamos el módulo para leer su estado en RAM de forma limpia
 
 async def calcular_hash_async(ruta_archivo: str) -> str:
     """Calcula el hash SHA-256 de un archivo en bloques fijos de forma asíncrona."""
@@ -17,27 +17,37 @@ async def calcular_hash_async(ruta_archivo: str) -> str:
     return await asyncio.to_thread(leer_bloques)
 
 async def iniciar_file_watcher(indice_conocimiento: dict, lock_indice: asyncio.Lock, directorio: str = "knowledge") -> None:
-    """Monitorea continuamente el CSV inyectando los datos directamente en el índice global."""
-    print(f"[WATCHER] Iniciando monitoreo asíncrono seguro en: {directorio}...")
-    archivo_monitoreado = os.path.join(directorio, "podologia_faq.csv")
-    ultimo_hash = ""
+    """Monitorea continuamente el directorio inyectando cualquier CSV en el índice global."""
+    print(f"[WATCHER] Iniciando monitoreo asíncrono dinámico en: {directorio}...")
+    
+    # Registro de hashes indexado por el nombre de cada archivo
+    estados_hash: dict[str, str] = {}
 
     try:
         while True:
-            if await asyncio.to_thread(os.path.exists, archivo_monitoreado):
-                hash_actual = await calcular_hash_async(archivo_monitoreado)
-                
-                if hash_actual != ultimo_hash:
-                    print(f"[RELOAD] Cambio detectado en {archivo_monitoreado}. Adquiriendo candado...")
-                    
-                    async with lock_indice:
-                        datos_frescos = cargar_csv_en_ram(archivo_monitoreado)
-                        indice_conocimiento.clear()
-                        if isinstance(datos_frescos, dict):
-                            indice_conocimiento.update(datos_frescos)
-                    
-                    ultimo_hash = hash_actual
-                    print("[RELOAD] Índice global en RAM actualizado con éxito.")
+            if await asyncio.to_thread(os.path.exists, directorio):
+                # Listar los archivos del directorio de forma asíncrona
+                archivos = await asyncio.to_thread(os.listdir, directorio)
+                archivos_csv = [f for f in archivos if f.endswith(".csv")]
+
+                for archivo in archivos_csv:
+                    ruta_completa = os.path.join(directorio, archivo)
+                    hash_actual = await calcular_hash_async(ruta_completa)
+                    ultimo_hash = estados_hash.get(ruta_completa, "")
+
+                    if hash_actual != ultimo_hash:
+                        print(f"[RELOAD] Cambio detectado en {ruta_completa}. Adquiriendo candado...")
+                        
+                        async with lock_indice:
+                            # Ejecuta la indexación polimórfica que actualiza la RAM del indexador
+                            await asyncio.to_thread(indexador.cargar_csv_en_ram, ruta_completa)
+                            
+                            # Sincroniza de forma limpia la memoria compartida del orquestador central
+                            indice_conocimiento.clear()
+                            indice_conocimiento.update(indexador.INDICE_CONOCIMIENTO)
+                        
+                        estados_hash[ruta_completa] = hash_actual
+                        print(f"[RELOAD] Índice global actualizado con éxito desde {archivo}.")
 
             await asyncio.sleep(5)
     except asyncio.CancelledError:

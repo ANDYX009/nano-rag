@@ -1,0 +1,8 @@
+categoria,concepto,detalle
+horario,Lunes a Viernes,09:00 a 18:00 horas (Horario Corrido)
+horario,Sabados,10:00 a 14:00 horas
+horario,Domingos y Festivos,Cerrado por descanso de personal medico
+precio,Consulta General Podologica,450.00 MXN (Incluye valoracion inicial)
+precio,Tratamiento de Onicocriptosis (Uña encarnada),800.00 MXN (Por canal lateral)
+precio,Profilaxis Podologica Completa,600.00 MXN (Limpieza y corte terapeutico)
+precio,Tratamiento Laser para Onicomicosis (Hongo),1200.00 MXN (Por sesion completa)

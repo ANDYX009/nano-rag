@@ -201,21 +201,26 @@ async def manejador_cliente(
 
         logging.info(f"Pregunta recibida con éxito: '{pregunta_usuario[:30]}...'")
 
-        # 4. Invocación al motor de búsqueda local protegido por Lock asíncrono
+        # 4. Invocación dinámica al motor de búsqueda local (Multiarchivo) protegido por Lock asíncrono
+        filas_coincidentes = []
         async with lock_indice:
-            filas_coincidentes = buscador.buscar_fragmento_relevante(
-                pregunta_usuario, "knowledge/podologia_faq.csv", indice_conocimiento
-            )
+            # Escanea todos los archivos CSV cargados dinámicamente en memoria por el Watcher
+            for ruta_csv in indice_conocimiento.keys():
+                fragmentos = buscador.buscar_fragmento_relevante(
+                    pregunta_usuario, ruta_csv, indice_conocimiento
+                )
+                if fragmentos and fragmentos[0]:  # Validar que no sea una lista vacía o nula
+                    filas_coincidentes.extend(fragmentos)
 
-        # Empaquetado estricto del contexto para mitigar la inyección de prompts
+        # Empaquetado estricto normalizado del contexto para mitigar la inyección de prompts
         contexto_medico = ""
         if filas_coincidentes:
             contexto_medico = "\n".join([
                 (
-                    f"Pregunta frecuente: {f['pregunta']}\n"
-                    f"Respuesta médica: {f['respuesta']}"
+                    f"Información relevante ({f.get('categoria', 'general')}): {f.get('palabras_clave', '')}\n"
+                    f"Detalle oficial: {f.get('respuesta_oficial', '')}"
                 )
-                for f in filas_coincidentes
+                for f in filas_coincidentes if f
             ])
 
         prompt_final = (
@@ -224,6 +229,7 @@ async def manejador_cliente(
             "</contexto>\n\n"
             f"Pregunta del paciente: {pregunta_usuario}"
         )
+
 
         # ==============================================================================
         # 5. Extracción segura de credenciales e Inferencia con Contingencia Local

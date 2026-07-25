@@ -11,7 +11,7 @@ def cargar_csv_en_ram(ruta_archivo: str) -> None:
     if not os.path.exists(ruta_archivo):
         print(f"[ERROR] No se pudo indexar. Archivo no encontrado: {ruta_archivo}")
         return
-
+        
     nuevos_fragmentos = []
     
     with open(ruta_archivo, mode="r", encoding="utf-8") as f:
@@ -19,11 +19,27 @@ def cargar_csv_en_ram(ruta_archivo: str) -> None:
         lector = csv.DictReader(f)
         
         for fila in lector:
-            # Limpiamos y extraemos las columnas definidas en el contrato técnico
+            # Determinamos dinámicamente el esquema del archivo CSV
+            categoria = fila.get("categoria", "").strip()
+            
+            if "concepto" in fila:
+                # Esquema para clinica_info.csv (Horarios y Precios)
+                concepto = fila.get("concepto", "").strip()
+                detalle = fila.get("detalle", "").strip()
+                
+                # Combinamos categoría y concepto para darle contexto léxico al buscador
+                palabras_clave = f"{categoria} {concepto}".lower().strip()
+                respuesta_oficial = detalle
+            else:
+                # Esquema original para podologia_faq.csv
+                palabras_clave = fila.get("palabras_clave", "").lower().strip()
+                respuesta_oficial = fila.get("respuesta_oficial", "").strip()
+            
+            # Limpiamos y extraemos las columnas normalizadas según el contrato técnico
             nuevos_fragmentos.append({
-                "categoria": fila.get("categoria", "").strip(),
-                "palabras_clave": fila.get("palabras_clave", "").lower().strip(),
-                "respuesta_oficial": fila.get("respuesta_oficial", "").strip()
+                "categoria": categoria,
+                "palabras_clave": palabras_clave,
+                "respuesta_oficial": respuesta_oficial
             })
             
     # Reemplazo atómico en memoria RAM para evitar corrupción de datos
