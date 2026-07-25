@@ -234,7 +234,7 @@ async def manejador_cliente(
         # ==============================================================================
         # 5. Extracción segura de credenciales e Inferencia con Contingencia Local
         # ============================================================================== 
-        
+
         url_final = os.environ.get("API_URL_LLM", "https://sambanova.ai").strip()
         token_api = os.environ.get("API_TOKEN_LLM", "").strip()
 
@@ -263,7 +263,7 @@ async def manejador_cliente(
             )
             
             payload_api = json.dumps({
-                "model": "Qwen/Qwen2.5-7B-Instruct",
+                "model": "Qwen2.5-7B-Instruct",
                 "messages": [
                     {
                         "role": "system",
