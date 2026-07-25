@@ -304,14 +304,20 @@ async def manejador_cliente(
                 else:
                     texto_llm = f"{contenido_crudo}{firma_obligatoria}"
 
+            except urllib.error.HTTPError as e_http:
+                cuerpo_error = e_http.read().decode("utf-8") if e_http.fp else "Sin cuerpo"
+                logging.error(f"Error de SambaNova (HTTP {e_http.code}): {cuerpo_error}")
+                texto_llm = (
+                    f"Error de comunicación con SambaNova. Detalle técnico: HTTP {e_http.code} - {cuerpo_error}. "
+                    "\n\n*Nota: Esta es una guía informativa y no reemplaza la consulta con un podólogo profesional.*"
+               )
             except Exception as e_api:
-                logging.error(f"Error de conexión saliente a Hugging Face: {e_api}")
+                logging.error(f"Error de conexión saliente: {e_api}")
                 # DIAGNÓSTICO TEMPORAL: Inyectar la excepción exacta en la respuesta
                 texto_llm = (
-                    f"Error de comunicación con el motor de IA. Detalle técnico: {str(e_api)}. "
-                    "\n\n*Nota: Esta es una guía informativa y no reemplaza la consulta con un podólogo profesional.*"
-                )
-
+                f"Error de comunicación con el motor de IA. Detalle técnico: {str(e_api)}. "
+                "\n\n*Nota: Esta es una guía informativa y no reemplaza la consulta con un podólogo profesional.*"
+              )
 
         # 6. Serialización garantizando caracteres UTF-8 legibles (sin escape ASCII)
         payload_respuesta = json.dumps({"respuesta": texto_llm}, ensure_ascii=False).encode("utf-8")
