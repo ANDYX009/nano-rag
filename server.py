@@ -45,7 +45,22 @@ async def manejador_cliente(
             inicio_conexion = asyncio.get_event_loop().time()
 
             vistazo = await asyncio.wait_for(reader.read(1024), timeout=0.5)
-            if not vistazo.strip() or b"GET / " in vistazo or b"GET /HTTP" in vistazo:
+            if vistazo.startswith(b"OPTIONS ") or b"OPTIONS /" in vistazo:
+                logging.info(f"Preflight CORS detectado desde {direccion_cliente}. Respondiendo 204.")
+                cabeceras_cors = (
+                    b"HTTP/1.1 204 No Content\r\n"
+                    b"Access-Control-Allow-Origin: *\r\n"
+                    b"Access-Control-Allow-Methods: POST, OPTIONS\r\n"
+                    b"Access-Control-Allow-Headers: Content-Type, Authorization\r\n"
+                    b"Access-Control-Max-Age: 86400\r\n"
+                    b"Connection: close\r\n\r\n"
+               )
+                writer.write(cabeceras_cors)
+                await writer.drain()
+                writer.close()
+                await writer.wait_closed()
+                return
+            elif not vistazo.strip() or b"GET / " in vistazo or b"GET /HTTP" in vistazo:
                 logging.info(f"[HEALTHCHECK] Diagnóstico HTTP detectado. Respondiendo éxito.")
                 writer.write(
                     b"HTTP/1.1 200 OK\r\n"
@@ -53,11 +68,12 @@ async def manejador_cliente(
                     b"Content-Length: 2\r\n"
                     b"Connection: close\r\n\r\n"
                     b"OK"
-                )
+               )
                 await writer.drain()
                 writer.close()
                 await writer.wait_closed()
                 return
+
             else:
                 datos_cabeceras = vistazo
         except (asyncio.TimeoutError, ConnectionResetError):
