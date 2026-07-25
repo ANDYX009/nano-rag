@@ -277,7 +277,8 @@ async def manejador_cliente(
                 ],
                 "temperature": 0.2,
                 "max_tokens": 512
-            }).encode("utf-8")
+            }, indent=2).encode("utf-8")
+
 
             req = urllib.request.Request(
                 url_final, data=payload_api, headers=headers_api, method="POST"
