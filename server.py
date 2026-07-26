@@ -235,7 +235,7 @@ async def manejador_cliente(
         # 5. Extracción segura de credenciales e Inferencia con Contingencia Local
         # ============================================================================== 
 
-        url_final = os.environ.get("API_URL_LLM", "https://sambanova.ai").strip()
+        url_final = os.environ.get("API_URL_LLM", "https://api.groq.com/openai/v1/chat/completions").strip()
         token_api = os.environ.get("API_TOKEN_LLM", "").strip()
 
         if token_api == "Bearer free" or token_api.strip() == "Bearer" or not token_api:
@@ -264,7 +264,7 @@ async def manejador_cliente(
             )
             
             payload_api = json.dumps({
-                "model": "Meta-Llama-3.1-8B-Instruct",
+                "model": "llama-3.1-8b-instant",
                 "messages": [
                     {
                         "role": "system",
@@ -278,7 +278,6 @@ async def manejador_cliente(
                 "temperature": 0.2,
                 "max_tokens": 512
             }, indent=2).encode("utf-8")
-
 
             req = urllib.request.Request(
                 url_final, data=payload_api, headers=headers_api, method="POST"
@@ -308,9 +307,9 @@ async def manejador_cliente(
 
             except urllib.error.HTTPError as e_http:
                 cuerpo_error = e_http.read().decode("utf-8") if e_http.fp else "Sin cuerpo"
-                logging.error(f"Error de SambaNova (HTTP {e_http.code}): {cuerpo_error}")
+                logging.error(f"Error de GroqCloud (HTTP {e_http.code}): {cuerpo_error}")
                 texto_llm = (
-                    f"Error de comunicación con SambaNova. Detalle técnico: HTTP {e_http.code} - {cuerpo_error}. "
+                    f"Error de comunicación con GroqCloud. Detalle técnico: HTTP {e_http.code} - {cuerpo_error}. "
                     "\n\n*Nota: Esta es una guía informativa y no reemplaza la consulta con un podólogo profesional.*"
                )
             except Exception as e_api:
