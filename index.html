@@ -9,7 +9,8 @@
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background: #ffffff;
-    height: 100vh;
+    height: 100vh;  /* Respaldo para navegadores antiguos */
+    height: 100dvh; /* Altura dinámica real del dispositivo */
     display: flex;
     flex-direction: column;
   }
@@ -197,6 +198,10 @@ function parseBotMarkdown(text) {
     }
     html = newParts.join("<br>").replace(/<\/ul><br>/g, "</ul>").replace(/<br><ul>/g, "<ul>");
   }
+
+    // REEMPLAZO ATÓMICO: Convertir dobles asteriscos (**texto**) a etiquetas strong nativas
+    html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+
   return html;
 }
 
