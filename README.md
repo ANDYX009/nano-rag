@@ -21,16 +21,16 @@ La aplicación opera mediante un modelo de orquestación central asíncrona (`as
 ~/proyectos/nano-rag/
 ├── .gitignore                 <-- Exclusión de metadatos (__pycache__/) y variables de entorno.
 ├── Dockerfile                 <-- Contenedor Alpine robustecido con certificados CA nativos.
-├── SPEC_CHAT_AGENT.md         <-- Contrato técnico y guardarraíles lógicos.
-├── CONTEXTO_SESION.md         <-- Historial narrativo del desarrollo.
-├── README.md                  <-- Presentación del proyecto y guía de despliegue.
+├── SPEC_CHAT_AGENT.md         <-- Contrato técnico y guardarraíles lógicos (Requiere actualizar modelo).
+├── CONTEXTO_SESION.md         <-- Historial narrativo del desarrollo (100% OK - Actualizada).
+├── README.md                  <-- Presentación del proyecto y guía de despliegue (100% OK - Actualizada).
 ├── app.py                     <-- Orquestador maestro central asíncrono y ciclo de vida.
-├── server.py                  <-- Servidor HTTP nativo con contexto SSL seguro.
+├── server.py                  <-- Servidor HTTP nativo conectado a GroqCloud (100% OK).
 ├── watcher.py                 <-- Corrutina asíncrona de monitoreo de archivos (Hot-Reload).
 ├── indexador.py               <-- Extractor utilitario de archivos CSV a memoria RAM.
 ├── buscador.py                <-- Motor léxico con expansión semántica (Tesauro).
 ├── test_stress.py             <-- Arnés concurrente para auditoría de carga y seguridad.
-├── index.html                 <-- Interfaz de usuario "PodoChat" estilo Google.
+├── index.html                 <-- Interfaz de usuario "PodoChat" con Markdown y CSS dinámico (100% OK).
 └── knowledge/                 
     ├── podologia_faq.csv      <-- Base de conocimientos de preguntas frecuentes clínicas.
     └── clinica_info.csv       <-- Datos de simulación comercial (Horarios y Tarifas).
@@ -44,7 +44,7 @@ La aplicación opera mediante un modelo de orquestación central asíncrona (`as
 * **Criptografía:** `hashlib` (SHA-256) y `ssl` (Contexto criptográfico verificado por `ca-certificates`).
 * **Entorno Local:** WSL (Windows Subsystem for Linux), VS Code, Terminal Warp.
 * **Contenedorización:** Docker (`python:3.14-alpine`).
-* **Nube Productiva:** Render Cloud (Instancia Docker Web Service) coordinada con el Router de Hugging Face (`meta-llama/Llama-3.1-8B-Instruct`).
+* **Nube Productiva:** Render Cloud (Instancia Docker Web Service) coordinada con la infraestructura de inferencia ultra-rápida de **GroqCloud** (`model: llama-3.1-8b-instant`).
 
 ---
 

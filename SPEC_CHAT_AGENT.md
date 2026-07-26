@@ -22,14 +22,14 @@
 ## 4. Pipeline del Chat y Seguridad de Inyección
 - **Interceptación de Preguntas:** El servidor HTTP asíncrono recibe la consulta del usuario en formato JSON, limpia el texto y escanea el índice en RAM iterando sobre todos los archivos cargados.
 - **Expansión Semántica:** Inclusión de un Tesauro Podológico local para expandir términos médicos hacia sinónimos populares y maximizar la intersección de conjuntos.
-- **Inyección Óptima de Contexto:** El contexto extraído de múltiples archivos se consolida y empaqueta rígidamente dentro de etiquetas estructurales (`<contexto>...</contexto>`) antes de ser enviado al prompt final del modelo `meta-llama/Llama-3.1-8B-Instruct`.
+- **Inyección Óptima de Contexto:** El contexto extraído de múltiples archivos se consolida y empaqueta rígidamente dentro de etiquetas estructurales (`<contexto>...</contexto>`) antes de ser enviado al prompt final del modelo `llama-3.1-8b-instant` hospedado en GroqCloud.
 
 ## 5. Resiliencia de Red y Guardarraíles en Tiempo Real
 - **Bypass CORS Nativo:** Estructura de control al inicio de la lectura del búfer que captura el método `OPTIONS` (Preflight) del navegador, respondiendo de inmediato un estado HTTP `204 No Content` con cabeceras limpias para autorizar el tráfico cruzado de `index.html`.
 - **Protección Anticolapsos:** Todo el ciclo de red se encapsula en bloques `try/except Exception` combinados con `await writer.drain()` y cierres en la sección `finally` para garantizar la liberación inmediata de los puertos.
 - **Control de Inundación de Memoria:** Validación estricta del encabezado `Content-Length`. Si el tamaño declarado supera el límite duro de 10 Megabytes, el servidor responde con un estado HTTP 413 y aborta la conexión.
 - **Mitigación de Lectura Lenta (Slowloris):** Implementación de un **Timeout Absoluto acumulativo** de 3.0 segundos para la lectura completa de cabeceras HTTP.
-- **Mecanismo de Inferencia Segura:** Conexión asíncrona hacia la API de Inferencia de Hugging Face con un motor de **Contingencia Local (Mock Asíncrono)** que intercepta la ausencia del token en desarrollo para simular el procesamiento médico de forma segura.
+- **Mecanismo de Inferencia Segura:** Conexión asíncrona hacia la API oficial de **GroqCloud** bajo el formato de autorización Bearer nativo (`Authorization: Bearer gsk_...`) con un motor de **Contingencia Local (Mock Asíncrono)** que intercepta la ausencia del token en desarrollo para simular el procesamiento médico de forma segura.
 
 ## 6. Arquitectura de Despliegue en Producción
 - **Empaquetado (Containerization):** Manifiesto `Dockerfile` basado en `python:3.14-alpine` con inyección explícita de `ca-certificates` para blindar la seguridad SSL.
